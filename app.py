@@ -13,6 +13,9 @@ from markupsafe import escape
 app = Flask(__name__)
 app.secret_key = 'trump123'  # Set a secure secret key
 
+# load_dotenv
+# app.secret_key = os.getenv('secret_key')
+
 # Configure the SQLite database
 db_path = os.path.join(os.path.dirname(__file__), 'trump.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
@@ -55,17 +58,28 @@ def sitemap():
     
 @app.route('/admin_panel')
 def admin_panel():
+    user_id = session.get('user_id')
+    
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user = User.query.get(user_id)
+    
+    if user != 'admin':
+        return "Unauthorized access", 403
+    
     return render_template('admin_panel.html')
 
 # Route to handle redirects based on the destination query parameter
 @app.route('/redirect', methods=['GET'])
 def redirect_handler():
     destination = request.args.get('destination')
-
-    if destination:
+    
+    allowed = ['https://trusted-site.com', '/internal-path']
+    if destination in allowed:
         return redirect(destination)
     else:
-        return "Invalid destination", 400
+        abort(400)
 
 
 @app.route('/comments', methods=['GET', 'POST'])
